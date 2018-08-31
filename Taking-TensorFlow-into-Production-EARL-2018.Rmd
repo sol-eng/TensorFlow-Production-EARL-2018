@@ -1,0 +1,304 @@
+---
+title: "Taking TensorFlow into Production"
+subtitle: "(A case study of text analytics on Zendesk tickets)"
+author: "Andrie de Vries<br/>Solutions engineer<br/>RStudio"
+date: '2018/09/12 (updated: `r Sys.Date()`)'
+output:
+  xaringan::moon_reader:
+    chakra: libs/remark-latest.min.js
+    css:
+    - theme/rstudio.css
+    - theme/custom.css
+    lib_dir: libs
+    nature:
+      countIncrementalSlides: yes
+      highlightLines: yes
+      highlightStyle: github
+      ratio: '16:9'
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+```
+
+class: rstudio-slide
+
+# Abstract
+
+.smaller[
+TensorFlow is the most popular deep learning framework, and R users can use the full power of TensorFlow using the `keras` package.  Many resources exist that describe how to train a model and achieve good results.
+
+However, **production deployment introduces many complications**. For example, the architect must design an appropriate architecture (CPU, GPU or TPU) for training as well as scoring.
+
+Production deployment assumes that you can readily **create a pipeline** that includes data pre-processing, model evaluation and re-training, as well as scoring on a production server with a suitable API.
+
+The R packages `tfdatasets`, `tfruns`, `cloudml` and `tfdeploy` provides a solution for **building pipelines, evaluating models, training hyperparameters** at scale and deploying TensorFlow models to a production server.
+
+The `keras` package allows exporting a model to native format that is easy to deploy, but pre-processing on the TensorFlow graph is much faster than pre-processing using R - this is enabled by the `tfdatasets` package.
+
+I illustrate the concepts by an RStudio internal deep network that classifies support tickets using **natural language processing** with recurrent layers. The network is deployed on an instance of RStudio Connect, and informs recommendations on Zendesk ticketing system.
+]
+
+---
+class: rstudio-slide
+
+# Outline
+
+.larger[
+* TensorFlow
+* Challenges of production deployment
+* Problem description: Zendesk tickets
+* Machine learning pipeline
+* Deployment with RStudio Connect
+* Case study
+]
+
+.rightbottom[
+<img src="images/EARL_logo_dark.png" height=100px />
+]]
+
+
+---
+
+class: rstudio-fill-slide, left, middle
+
+# TensorFlow
+
+---
+class: rstudio-slide
+
+## TensorFlow
+
+
+<img src="images/tensors_flowing.gif" style="margin-right: 60px; margin-top: -15px;" align=left />
+<img src="images/tensorflow-logo-large.png" width=350; margin-top: -30px;/>
+
+---
+class: rstudio-slide
+
+## TensorFlow APIs
+
+<img src="images/tensorflow-apis.png" width=1000/>
+
+
+---
+
+class: rstudio-fill-slide, left, middle
+
+# Challenges of production deployment
+
+---
+class: rstudio-slide
+
+## Why production fails
+
+* Failing to quantify the busines value
+
+* Inability to get stakeholder buy-in
+
+* Getting stuck in optimising model fit
+
+* Failing to close the end-to-end loop
+
+* Lack of change management
+
+
+---
+class: rstudio-fill-slide, left, middle
+
+# Problem description: Zendesk tickets
+
+---
+class: rstudio-slide
+
+## What is a zendesk ticket?
+
+![](images/image-01-zendesk.png)
+
+---
+class: rstudio-slide
+
+## What is a zendesk ticket?
+
+![](images/zendesk-ticket-1.png)
+
+
+
+---
+class: rstudio-slide
+
+## The business problem
+
+Goal:
+
+* Predict which support tickets will be "complex"
+* Complexity is the number of back-and-forth comments in the ticket
+* High complexity can also be a leading indicator of troubled accounts
+
+Business value:
+
+* Intervene early in complex tickets
+* For example by scheduling a phone call with the customer
+
+---
+class: rstudio-slide
+
+## Getting stakeholder buy-in
+
+Stakeholder buy-in is critical to the success of your project.
+
+The data science team must work **with** the stakeholders:
+
+* Users
+* Management
+* IT teams
+
+
+
+---
+class: rstudio-fill-slide, left, middle
+
+# Machine learning pipeline
+
+---
+class: rstudio-slide
+
+## Data warehouse
+
+![](images/image-02-data-warehouse.png)
+
+---
+class: rstudio-slide
+
+## Development environment
+
+![](images/image-03-dev-env.png)
+
+---
+class: rstudio-slide
+
+## Modeling
+
+![](images/training-accuracy.png)
+
+
+---
+class: rstudio-slide
+
+## Don't get stuck in optimising model fit
+
+![](images/model-metrics.png)
+
+
+---
+
+class: rstudio-fill-slide, left, middle
+
+# Deployment with RStudio Connect
+
+---
+class: rstudio-slide
+
+## Production environment
+
+![](images/image-04-deployment.png)
+
+---
+class: rstudio-slide,  center, middle
+
+## RStudio Connect 
+
+<img src="images/rstudio-connect.png" height=400/>
+
+---
+class: rstudio-slide
+
+## Deploying a TensorFlow model
+
+---
+class: rstudio-slide
+
+## plumber APIs
+
+The `plumber` package converts your script into an API using simple decorators in the comments
+
+```r
+#* @apiTitle TensorFlow zendesk ticket scoring API
+
+#* Predicts ticket complexity given the initial issue.
+#*
+#* @param org Ticket organization name
+#* @param description Ticket description (text)
+#* @param title Ticket title
+#* @param id Ticket id
+#* 
+#* @post /
+function(id, title, description, org) {
+  score <- runif(1) # <<
+  record_in_googlesheet(id, title, description, org, score)
+  score
+}
+```
+
+---
+class: rstudio-slide
+
+## Hosting plumber APIs on Connect
+
+![](images/connect-api.png)
+
+
+
+---
+class: rstudio-slide
+
+## Closing the end-to-end loop
+
+![](images/image-05-closed-loop.png)
+
+
+---
+class: rstudio-slide
+
+## Updating the ticket information
+
+![](images/zendesk-ticket-2.png)
+
+---
+class: rstudio-slide
+
+## Creating an API log file
+
+![](images/zendesk-ticket-api-log.png)
+
+
+---
+
+class: rstudio-fill-slide, left, middle
+
+# Case study
+
+---
+class: rstudio-slide
+
+## Overall architecture
+
+![](images/image-06-overall.png)
+
+
+---
+class: rstudio-slide,  center, middle
+
+# Thank you! 
+
+<img src="images/r-logo.png" width=100/> <img src="images/tensorflow-logo.png" width=100 style="margin-left: 20px; ma"/> 
+
+
+Slides:
+
+<http://colorado.rstudio.com/rsc/TensorFlow-Production-EARL-2018/>
+
+
+Subscribe to the blog to stay up to date!
+
+<https://tensorflow.rstudio.com/blog/>

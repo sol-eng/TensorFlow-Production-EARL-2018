@@ -1,0 +1,28 @@
+
+
+.smaller p {
+  font-size: 90%;
+}
+
+.smallest p {
+  font-size: 80%;
+}
+
+.larger {
+  font-size: 125%;
+}
+
+.larger {
+  font-size: 150%;
+}
+
+.floatright {
+  float:right;
+}
+
+
+.rightbottom {
+  position:absolute;
+  bottom:0;
+  right:10px;
+}
