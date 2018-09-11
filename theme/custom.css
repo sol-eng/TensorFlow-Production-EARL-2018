@@ -26,3 +26,34 @@
   bottom:0;
   right:10px;
 }
+
+.rstudio-slide {
+  background-image: url('images/background-white-4x3.png');
+  background-size: contain;
+  padding-left: 200px;
+  padding-top: 0;
+}
+
+.title-slide {
+  background-image: url('images/title-4x3.png');
+  background-size: contain;
+}
+
+.rstudio-fill-slide {
+  background-image: url('images/background-blue-4x3.png');
+  background-size: contain;
+  padding-left: 200px;
+  padding-top: 0;
+}
+
+
+.remark-slide .title-slide {
+  padding-left: 200px;
+  padding-top: 0;
+}
+
+.remark-code, .remark-inline-code {
+  font-family: 'PT Mono';
+  background-color: #f4f4f4;
+}
+

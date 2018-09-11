@@ -1,7 +1,7 @@
 ---
 title: "Taking TensorFlow into Production"
-subtitle: "(A case study of text analytics on Zendesk tickets)"
-author: "Andrie de Vries<br/>Solutions engineer<br/>RStudio"
+subtitle: "(A case study of Zendesk tickets)"
+author: "Andrie de Vries<br/>Solutions engineer,RStudio"
 date: '2018/09/12 (updated: `r Sys.Date()`)'
 output:
   xaringan::moon_reader:
@@ -9,53 +9,38 @@ output:
     css:
     - theme/rstudio.css
     - theme/custom.css
+    - theme/speech-bubble.css
     lib_dir: libs
     nature:
       countIncrementalSlides: yes
       highlightLines: yes
       highlightStyle: github
-      ratio: '16:9'
+      ratio: '4:3'
 ---
+class: rstudio-slide
 
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
 ```
 
-class: rstudio-slide
-
-# Abstract
-
-.smaller[
-TensorFlow is the most popular deep learning framework, and R users can use the full power of TensorFlow using the `keras` package.  Many resources exist that describe how to train a model and achieve good results.
-
-However, **production deployment introduces many complications**. For example, the architect must design an appropriate architecture (CPU, GPU or TPU) for training as well as scoring.
-
-Production deployment assumes that you can readily **create a pipeline** that includes data pre-processing, model evaluation and re-training, as well as scoring on a production server with a suitable API.
-
-The R packages `tfdatasets`, `tfruns`, `cloudml` and `tfdeploy` provides a solution for **building pipelines, evaluating models, training hyperparameters** at scale and deploying TensorFlow models to a production server.
-
-The `keras` package allows exporting a model to native format that is easy to deploy, but pre-processing on the TensorFlow graph is much faster than pre-processing using R - this is enabled by the `tfdatasets` package.
-
-I illustrate the concepts by an RStudio internal deep network that classifies support tickets using **natural language processing** with recurrent layers. The network is deployed on an instance of RStudio Connect, and informs recommendations on Zendesk ticketing system.
-]
 
 ---
 class: rstudio-slide
 
 # Outline
 
-.larger[
-* TensorFlow
 * Challenges of production deployment
-* Problem description: Zendesk tickets
-* Machine learning pipeline
+
+* Model development
+
 * Deployment with RStudio Connect
-* Case study
-]
+
+* Closing the end-to-end loop
+
 
 .rightbottom[
 <img src="images/EARL_logo_dark.png" height=100px />
-]]
+]
 
 
 ---
@@ -90,7 +75,7 @@ class: rstudio-fill-slide, left, middle
 ---
 class: rstudio-slide
 
-## Why production fails
+## When production deployment fails
 
 * Failing to quantify the busines value
 
@@ -109,11 +94,43 @@ class: rstudio-fill-slide, left, middle
 # Problem description: Zendesk tickets
 
 ---
+
 class: rstudio-slide
 
-## What is a zendesk ticket?
+## A typical support ticket
 
-![](images/image-01-zendesk.png)
+
+.right-column[
+.client-speech[ My code doesn't work, help me ]
+
+.agent-speech[ Sure, what's the problem ]
+
+.client-speech[ I'm stuck... ]
+
+.agent-speech[ . . . ]
+
+.client-speech[ . . . ]
+]
+
+--
+
+.left-column[
+
+Initial message
+
+* Subject
+* Text
+* Company name
+* Person
+* Date
+
+Subsequently
+
+* tags 
+* additional comments
+
+
+]
 
 ---
 class: rstudio-slide
@@ -121,8 +138,6 @@ class: rstudio-slide
 ## What is a zendesk ticket?
 
 ![](images/zendesk-ticket-1.png)
-
-
 
 ---
 class: rstudio-slide
@@ -139,6 +154,15 @@ Business value:
 
 * Intervene early in complex tickets
 * For example by scheduling a phone call with the customer
+
+---
+class: rstudio-slide
+
+## Architecture
+
+![](images/image-01-zendesk-4x3.png)
+
+
 
 ---
 class: rstudio-slide
@@ -165,14 +189,14 @@ class: rstudio-slide
 
 ## Data warehouse
 
-![](images/image-02-data-warehouse.png)
+![](images/image-02-data-warehouse-4x3.png)
 
 ---
 class: rstudio-slide
 
 ## Development environment
 
-![](images/image-03-dev-env.png)
+![](images/image-03-dev-env-4x3.png)
 
 ---
 class: rstudio-slide
@@ -185,7 +209,7 @@ class: rstudio-slide
 ---
 class: rstudio-slide
 
-## Don't get stuck in optimising model fit
+## Don't get stuck in model building
 
 ![](images/model-metrics.png)
 
@@ -199,13 +223,6 @@ class: rstudio-fill-slide, left, middle
 ---
 class: rstudio-slide
 
-## Production environment
-
-![](images/image-04-deployment.png)
-
----
-class: rstudio-slide,  center, middle
-
 ## RStudio Connect 
 
 <img src="images/rstudio-connect.png" height=400/>
@@ -213,14 +230,85 @@ class: rstudio-slide,  center, middle
 ---
 class: rstudio-slide
 
+## Deployment architecture
+
+![](images/image-04-deployment-4x3.png)
+
+
+---
+class: rstudio-slide
+
 ## Deploying a TensorFlow model
+
+First deployment
+
+```r
+
+rsconnect::deployTFModel(
+  last_model,
+  appTitle = glue("TensorFlow classifier {model_name}")
+)
+```
+
+Subsequent deployments
+
+```r
+
+rsconnect::deployTFModel(
+  last_model, 
+  appId = "....",
+  forceUpdate = TRUE
+)
+```
+
+---
+class: rstudio-slide
+
+## Viewing the TensorFlow model API
+
+In RStudio Connect
+
+
+![](images/connect-tensorflow-api-cropped.png)
+
+---
+class: rstudio-slide
+
+## Calling the TensorFlow serving API
+
+```{r, eval=FALSE}
+# Construct the payload
+body <- list(
+  instances = list(list(
+    x_val[1, ]
+  )))
+```
+
+```{r, eval=FALSE}
+# Call the API
+api_url <- glue("http://{host}/content/{app_id}/predict")
+
+score <- api_url %>% 
+  POST(body = body, encode = "json") %>% 
+  content() %>% 
+  fromJSON() %>% 
+  .$predictions %>% 
+  .[, , 1]
+```
+
+```{r, eval=FALSE}
+score
+## [1] 0.486874
+```
+
+
 
 ---
 class: rstudio-slide
 
 ## plumber APIs
 
-The `plumber` package converts your script into an API using simple decorators in the comments
+The `plumber` package converts your script into an API using comment decorators
 
 ```r
 #* @apiTitle TensorFlow zendesk ticket scoring API
@@ -250,12 +338,26 @@ class: rstudio-slide
 
 
 ---
+
+class: rstudio-fill-slide, left, middle
+
+# Closing the end-to-end loop
+
+---
 class: rstudio-slide
 
 ## Closing the end-to-end loop
 
-![](images/image-05-closed-loop.png)
-
+* New ticket arrives
+* Zendesk triggers a call to `plumber` API
+* API
+  - pre-processes the text, calls TensorFlow API
+  - Retrieves score
+  - Write record to log file
+  - Calls Zendesk API
+* Zendesk
+  - Inserts comment into ticket
+  - Updates ticket tag
 
 ---
 class: rstudio-slide
@@ -263,6 +365,15 @@ class: rstudio-slide
 ## Updating the ticket information
 
 ![](images/zendesk-ticket-2.png)
+
+---
+class: rstudio-slide
+
+## Closing the end-to-end loop
+
+![](images/image-05-closed-loop-4x3.png)
+
+
 
 ---
 class: rstudio-slide
@@ -276,14 +387,49 @@ class: rstudio-slide
 
 class: rstudio-fill-slide, left, middle
 
-# Case study
+# Summary
+
+
+---
+class: rstudio-slide
+
+## Lessons learnt
+
+It is possible, but harder than it should be.
+
+Feature requests:
+
+* TensorFlow click-button deployment
+* Better API swagger documentation
+* Sample scripts to generate JSON body
+
+Too early to tell longer term business impact
+
+---
+class: rstudio-slide
+
+## What next?
+
+Ideas to improve model
+
+* Different embeddings, e.g. `word2vec`
+* Hyperparameter tuning
+* Include additional comment text in model
+
+New ideas for business value
+
+* Predict tags based on text
+* Predict best support articles
+* Automate license key requests
+
 
 ---
 class: rstudio-slide
 
 ## Overall architecture
 
-![](images/image-06-overall.png)
+![](images/image-06-overall-4x3.png)
+
 
 
 ---
@@ -294,11 +440,15 @@ class: rstudio-slide,  center, middle
 <img src="images/r-logo.png" width=100/> <img src="images/tensorflow-logo.png" width=100 style="margin-left: 20px; ma"/> 
 
 
+
+.smaller[
 Slides:
 
-<http://colorado.rstudio.com/rsc/TensorFlow-Production-EARL-2018/>
+<http://colorado.rstudio.com/rsc/TensorFlow-EARL-2018/>
 
 
 Subscribe to the blog to stay up to date!
 
+
 <https://tensorflow.rstudio.com/blog/>
+]

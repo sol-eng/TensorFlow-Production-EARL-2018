@@ -111,7 +111,7 @@ a, a > code {
 /* Two-column layout */
 .left-column {
   color: #777;
-  width: 20%;
+  width: 50%;
   height: 92%;
   float: left;
 }
@@ -119,7 +119,7 @@ a, a > code {
   color: #000;
 }
 .right-column {
-  width: 75%;
+  width: 50%;
   float: right;
   padding-top: 1em;
 }
