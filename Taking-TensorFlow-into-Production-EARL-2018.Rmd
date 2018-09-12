@@ -35,6 +35,10 @@ class: title-slide
 
 #### 2018/09/12 <br> (updated: `r Sys.Date()`)
 
+.rightbottom[
+<img src="images/EARL_logo_dark.png" height=100px />
+]
+
 ---
 class: rstudio-slide
 
@@ -56,7 +60,7 @@ class: rstudio-slide
 
 ---
 
-class: rstudio-fill-slide, left, middle
+class: rstudio-fill-slide, center, middle
 
 # TensorFlow
 
@@ -79,7 +83,7 @@ class: white-slide
 
 ---
 
-class: rstudio-fill-slide, left, middle
+class: rstudio-fill-slide, center, middle
 
 # Challenges of production deployment
 
@@ -100,7 +104,7 @@ class: rstudio-slide
 
 
 ---
-class: rstudio-fill-slide, left, middle
+class: rstudio-fill-slide, center, middle
 
 # Problem description: Zendesk tickets
 
@@ -151,20 +155,61 @@ class: white-slide
 ![](images/zendesk-ticket-1.png)
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## The business problem
 
-Goal:
+* Predict which support tickets will be **complex**
 
-* Predict which support tickets will be "complex"
-* Complexity is the number of back-and-forth comments in the ticket
-* High complexity can also be a leading indicator of troubled accounts
+* Complexity is the total **number of comments** in the ticket
 
-Business value:
+* This indicates
 
-* Intervene early in complex tickets
-* For example by scheduling a phone call with the customer
+  - **Multiple interventions** by support 
+  
+  - Potentially a leading indicator of **troubled accounts**
+
+---
+class: white-slide
+
+## The business value
+
+* **Intervene early** in complex tickets, e.g. by scheduling a phone call with the customer
+
+* Reduce **number** of complex tickets
+
+* Reduce **churn**
+
+
+---
+class: rstudio-fill-slide, center, middle
+
+# Before you start...
+
+
+---
+class: rstudio-slide
+
+## Get stakeholder buy-in
+
+Stakeholder buy-in is critical to the success of your project.
+
+Work **with** your stakeholders:
+
+* Users
+
+* IT teams
+
+* Management
+
+* Finance
+
+
+
+---
+class: rstudio-fill-slide, center, middle
+
+# Machine learning pipeline
 
 ---
 class: white-slide
@@ -173,27 +218,6 @@ class: white-slide
 
 ![](images/image-01-zendesk-4x3.png)
 
-
-
----
-class: rstudio-slide
-
-## Getting stakeholder buy-in
-
-Stakeholder buy-in is critical to the success of your project.
-
-The data science team must work **with** the stakeholders:
-
-* Users
-* Management
-* IT teams
-
-
-
----
-class: rstudio-fill-slide, left, middle
-
-# Machine learning pipeline
 
 ---
 class: white-slide
@@ -397,7 +421,7 @@ class: white-slide
 
 ## Modeling
 
-Separable one-dimensional convolution
+One-dimensional **separable** convolution
 
 
 ```{r, eval=FALSE}
@@ -423,7 +447,7 @@ model <- keras_model_sequential() %>%
 ---
 class: white-slide
 
-## Modeling
+## That didn't work well...
 
 ![](images/training-accuracy.png)
 
@@ -495,21 +519,27 @@ model <- keras_model(
 class: white-slide
 
 
-## That didn't help either
+## That didn't work well either
 
 ![](images/model_history_2018-08-07.png)
 
 ---
 class: white-slide
 
-## Don't get stuck in model building
+## That didn't work well either
 
 ![](images/model-metrics.png)
 
 
+
+---
+class: highlight-slide, center, middle
+
+# Don't get stuck on model tuning!!!
+
 ---
 
-class: rstudio-fill-slide, left, middle
+class: rstudio-fill-slide, center, middle
 
 # Deployment with RStudio Connect
 
@@ -601,19 +631,19 @@ class: white-slide
 
 ## plumber APIs
 
-The `plumber` package converts your script into an API using comment decorators
+The `plumber` package **converts your script** into an API using simple **comment decorators**
 
 ```r
-#* @apiTitle TensorFlow zendesk ticket scoring API
+#' @apiTitle TensorFlow zendesk ticket scoring API
 
-#* Predicts ticket complexity given the initial issue.
-#*
-#* @param org Ticket organization name
-#* @param description Ticket description (text)
-#* @param title Ticket title
-#* @param id Ticket id
-#* 
-#* @post /
+#' Predicts ticket complexity given the initial issue.
+#'
+#' @param org Ticket organization name
+#' @param description Ticket description (text)
+#' @param title Ticket title
+#' @param id Ticket id
+#' 
+#' @post /
 function(id, title, description, org) {
   score <- runif(1) # <<
   record_in_googlesheet(id, title, description, org, score)
@@ -626,13 +656,15 @@ class: white-slide
 
 ## Hosting plumber APIs on Connect
 
+
+
 ![](images/connect-api.png)
 
 
 
 ---
 
-class: rstudio-fill-slide, left, middle
+class: rstudio-fill-slide, center, middle
 
 # Closing the end-to-end loop
 
@@ -683,7 +715,7 @@ class: white-slide
 
 ---
 
-class: rstudio-fill-slide, left, middle
+class: rstudio-fill-slide, center, middle
 
 # Summary
 
@@ -691,17 +723,30 @@ class: rstudio-fill-slide, left, middle
 ---
 class: rstudio-slide
 
-## Lessons learnt
+## Lessons learnt: modeling
 
-It is possible, but harder than it should be.
+TensorFlow doesn't do all your feature engineering.
+
+You must decide **which features** to use as inputs to the model:
+
+* Possibly from **multiple sources**
+
+* At the cost of greater **model complexity**
+
+---
+class: rstudio-slide
+
+## Lessons learnt: deployment
+
+It is still harder than it should be to deploy models.
 
 Feature requests:
 
 * TensorFlow click-button deployment
-* Better API swagger documentation
-* Sample scripts to generate JSON body
 
-Too early to tell longer term business impact
+* Better API swagger documentation
+
+* Sample scripts to generate JSON body
 
 ---
 class: rstudio-slide
@@ -711,15 +756,26 @@ class: rstudio-slide
 Ideas to improve model
 
 * Different embeddings, e.g. `word2vec`
+
 * Hyperparameter tuning
+
 * Include additional comment text in model
 
+* ...
+
+---
+class: rstudio-slide
+
+## What next?
 New ideas for business value
 
-* Predict tags based on text
-* Predict best support articles
-* Automate license key requests
+* Predict **tags** based on text
 
+* **Recommend** best support articles
+
+* **Automate** license key requests
+
+* ...
 
 ---
 class: white-slide
