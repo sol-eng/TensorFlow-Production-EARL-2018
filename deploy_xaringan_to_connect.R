@@ -1,5 +1,7 @@
 # ?rsconnect::deployDoc
 
+library(rsconnect)
+
 deploy_xaringan <- function(doc){
   qualified_doc <- normalizePath(doc, winslash = "/")
   app_files <-  c(

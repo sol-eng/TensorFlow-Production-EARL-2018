@@ -1,28 +1,30 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Taking TensorFlow into Production</title>
+    <title>Taking-TensorFlow-into-Production-EARL-2018.utf8</title>
     <meta charset="utf-8">
-    <meta name="author" content="Andrie de Vries Solutions engineer,RStudio" />
+    <meta name="author" content="" />
     <link rel="stylesheet" href="theme\rstudio.css" type="text/css" />
     <link rel="stylesheet" href="theme\custom.css" type="text/css" />
     <link rel="stylesheet" href="theme\speech-bubble.css" type="text/css" />
   </head>
   <body>
     <textarea id="source">
-class: center, middle, inverse, title-slide
+
+class: title-slide
+
+
+
+
+class: title-slide   
 
 # Taking TensorFlow into Production
-## (A case study of Zendesk tickets)
-### Andrie de Vries<br/>Solutions engineer,RStudio
-### 2018/09/12 (updated: 2018-09-11)
 
----
+## (A case study of Zendesk tickets)  
 
-class: rstudio-slide
+### Andrie de Vries&lt;br/&gt;Solutions engineer, RStudio
 
-
-
+#### 2018/09/12 &lt;br&gt; (updated: 2018-09-12)
 
 ---
 class: rstudio-slide
@@ -50,7 +52,7 @@ class: rstudio-fill-slide, left, middle
 # TensorFlow
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## TensorFlow
 
@@ -59,7 +61,7 @@ class: rstudio-slide
 &lt;img src="images/tensorflow-logo-large.png" width=350; margin-top: -30px;/&gt;
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## TensorFlow APIs
 
@@ -95,7 +97,7 @@ class: rstudio-fill-slide, left, middle
 
 ---
 
-class: rstudio-slide
+class: white-slide
 
 ## A typical support ticket
 
@@ -133,7 +135,7 @@ Subsequently
 ]
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## What is a zendesk ticket?
 
@@ -156,7 +158,7 @@ Business value:
 * For example by scheduling a phone call with the customer
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Architecture
 
@@ -185,21 +187,234 @@ class: rstudio-fill-slide, left, middle
 # Machine learning pipeline
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Data warehouse
 
 ![](images/image-02-data-warehouse-4x3.png)
 
+
 ---
-class: rstudio-slide
+class: white-slide
+
+## Zendesk database schema
+
+![](images/zendesk_schema_fivetran.png)
+
+---
+class: white-slide
+
+## Zendesk database schema extract
+
+
+```r
+library(datamodelr)
+dm_read_yaml("1_zendesk_schema.yml") %&gt;% 
+  dm_create_graph(rankdir = "LR", columnArrows = TRUE) %&gt;% 
+  dm_render_graph()
+```
+
+```yaml
+# data model segments
+
+- segment: &amp;tc Ticket Comments
+- segment: &amp;tg Tags
+
+# Tables and columns
+
+- table: Ticket
+  segment:
+  display: accent1
+  columns:
+    id: {key: yes}
+    assignee_id:
+    brand_id:
+    requester_id: {ref: User}
+    submitter_id: {ref: User}
+    organization_id: {ref: Organization}
+    created_at:
+    ..:
+    description:
+    ...:
+    subject:
+    type:
+    ....:
+
+- table: Ticket_comment
+  segment: *tc
+  display: accent2
+  columns:
+    id: {key: yes}
+    ticket_id: {ref: Ticket}
+    user_id: {ref: User}
+    body:
+    created:
+    ...:
+
+- table: Ticket_tag
+  segment: *tg
+  display: accent2
+  columns:
+    ticket_id: {key: yes, ref: Ticket}
+    tag:
+
+- table: Organization
+  segment:
+  columns:
+    id: {key: yes}
+    details:
+    name:
+    notes:
+    ...:
+
+- table: User
+  segment:
+  columns:
+    id: {key: yes}
+    organization_id: {ref: Organization}
+    ...:
+```
+
+
+
+---
+class: white-slide
+
+## Zendesk database schema extract
+
+![](images/zendesk_datamodel_diagram_2018-08-03.png)
+
+
+---
+class: white-slide
 
 ## Development environment
 
 ![](images/image-03-dev-env-4x3.png)
 
+
 ---
-class: rstudio-slide
+class: white-slide
+
+## Modeling
+
+Keras sequential model
+
+
+```r
+*model &lt;- keras_model_sequential() %&gt;%
+  layer_embedding(
+    input_dim = MAX_NUM_WORDS, 
+    output_dim = EMBEDDING_DIM, 
+    input_length = MAX_SEQUENCE_LENGTH
+  ) %&gt;% 
+  layer_global_average_pooling_1d() %&gt;% 
+  layer_dense(units = 32, activation = 'relu') %&gt;% 
+  layer_dense(units = 16, activation = 'relu') %&gt;% 
+  layer_dropout(0.25) %&gt;% 
+  layer_dense(1, activation = 'sigmoid')
+```
+
+---
+class: white-slide
+
+## Modeling
+
+With embedding layer to learn the text features
+
+
+```r
+model &lt;- keras_model_sequential() %&gt;% 
+* layer_embedding(
+*   input_dim = MAX_NUM_WORDS,
+*   output_dim = EMBEDDING_DIM,
+*   input_length = MAX_SEQUENCE_LENGTH
+* ) %&gt;%
+  layer_global_average_pooling_1d() %&gt;% 
+  layer_dense(units = 32, activation = 'relu') %&gt;% 
+  layer_dense(units = 16, activation = 'relu') %&gt;% 
+  layer_dropout(0.25) %&gt;% 
+  layer_dense(1, activation = 'sigmoid')
+```
+
+
+---
+class: white-slide
+
+## Modeling
+
+Simple multi layer perceptron
+
+
+```r
+model &lt;- keras_model_sequential() %&gt;% 
+  layer_embedding(
+    input_dim = MAX_NUM_WORDS, 
+    output_dim = EMBEDDING_DIM, 
+    input_length = MAX_SEQUENCE_LENGTH
+  ) %&gt;% 
+  layer_global_average_pooling_1d() %&gt;% 
+* layer_dense(units = 32, activation = 'relu') %&gt;%
+* layer_dense(units = 16, activation = 'relu') %&gt;%
+  layer_dropout(0.25) %&gt;% 
+  layer_dense(1, activation = 'sigmoid')
+```
+
+---
+class: white-slide
+
+## Modeling
+
+One-dimensional convolution
+
+
+```r
+model &lt;- keras_model_sequential() %&gt;% 
+  layer_embedding(
+    input_dim = MAX_NUM_WORDS, 
+    output_dim = EMBEDDING_DIM, 
+    input_length = MAX_SEQUENCE_LENGTH
+  ) %&gt;% 
+* layer_conv_1d(filters = 512, kernel_size = 3, activation = 'relu') %&gt;%
+  layer_max_pooling_1d(pool_size = 3) %&gt;%
+  layer_dropout(0.1) %&gt;%
+  layer_conv_1d(filters = 256, kernel_size = 3, activation = 'relu') %&gt;%
+  layer_max_pooling_1d(pool_size = 3) %&gt;%
+  layer_dropout(0.1) %&gt;%
+  layer_dense(1, activation = 'sigmoid')
+```
+
+
+---
+class: white-slide
+
+## Modeling
+
+Separable one-dimensional convolution
+
+
+
+```r
+model &lt;- keras_model_sequential() %&gt;% 
+  layer_embedding(
+    input_dim = MAX_NUM_WORDS, 
+    output_dim = EMBEDDING_DIM, 
+    input_length = MAX_SEQUENCE_LENGTH
+  ) %&gt;% 
+*  layer_separable_conv_1d(
+*    filters = 64, 
+*    kernel_size = 3, 
+*    depth_multiplier = 2
+*  ) %&gt;% 
+  layer_flatten() %&gt;% 
+  layer_dense(units = 32, activation = 'relu') %&gt;% 
+  layer_dense(units = 16, activation = 'relu') %&gt;% 
+  layer_dropout(0.25) %&gt;% 
+  layer_dense(1, activation = 'sigmoid')
+```
+
+---
+class: white-slide
 
 ## Modeling
 
@@ -207,7 +422,78 @@ class: rstudio-slide
 
 
 ---
-class: rstudio-slide
+class: white-slide
+
+## Modeling using the functional API
+
+More complex model using `keras` [functional API](https://keras.rstudio.com/articles/functional_api.html)
+
+&gt; The Keras functional API is the way to go for defining complex models, such as multi-output models, directed acyclic graphs, or models with shared layers.
+
+---
+class: white-slide
+
+## Modeling using the functional API
+
+More complex model using `keras` [functional API](https://keras.rstudio.com/articles/functional_api.html)
+
+
+
+```r
+concatenated &lt;- layer_concatenate(
+  list(name_embedding, subject_embedding, text_embedding)
+)
+
+output &lt;- concatenated %&gt;%
+  layer_dense(units = dense_dim) %&gt;%
+  layer_activation_leaky_relu() %&gt;%
+  layer_dropout(0.5) %&gt;%
+  layer_dense(units = 1, activation = "sigmoid")
+
+*model &lt;- keras_model( 
+*  inputs = list(name_input, subject_input, text_input), 
+*  outputs = output
+*)
+```
+
+---
+
+class: white-slide
+
+## Modeling using the functional API
+
+More complex model using `keras` [functional API](https://keras.rstudio.com/articles/functional_api.html)
+
+
+```r
+concatenated &lt;- layer_concatenate(
+* list(name_embedding, subject_embedding, text_embedding)
+)
+
+output &lt;- concatenated %&gt;%
+  layer_dense(units = dense_dim) %&gt;%
+  layer_activation_leaky_relu() %&gt;%
+  layer_dropout(0.5) %&gt;%
+  layer_dense(units = 1, activation = "sigmoid")
+
+model &lt;- keras_model(
+* inputs = list(name_input, subject_input, text_input),
+  outputs = output
+)
+```
+
+
+---
+
+class: white-slide
+
+
+## That didn't help either
+
+![](images/model_history_2018-08-07.png)
+
+---
+class: white-slide
 
 ## Don't get stuck in model building
 
@@ -221,14 +507,14 @@ class: rstudio-fill-slide, left, middle
 # Deployment with RStudio Connect
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## RStudio Connect 
 
 &lt;img src="images/rstudio-connect.png" height=400/&gt;
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Deployment architecture
 
@@ -236,7 +522,7 @@ class: rstudio-slide
 
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Deploying a TensorFlow model
 
@@ -262,7 +548,7 @@ rsconnect::deployTFModel(
 ```
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Viewing the TensorFlow model API
 
@@ -272,7 +558,7 @@ In RStudio Connect
 ![](images/connect-tensorflow-api-cropped.png)
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Calling the TensorFlow serving API
 
@@ -307,7 +593,7 @@ score
 
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## plumber APIs
 
@@ -332,7 +618,7 @@ function(id, title, description, org) {
 ```
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Hosting plumber APIs on Connect
 
@@ -352,25 +638,30 @@ class: rstudio-slide
 ## Closing the end-to-end loop
 
 * New ticket arrives
+
 * Zendesk triggers a call to `plumber` API
+
 * API
+
   - pre-processes the text, calls TensorFlow API
   - Retrieves score
   - Write record to log file
   - Calls Zendesk API
+  
 * Zendesk
+
   - Inserts comment into ticket
   - Updates ticket tag
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Updating the ticket information
 
 ![](images/zendesk-ticket-2.png)
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Closing the end-to-end loop
 
@@ -379,7 +670,7 @@ class: rstudio-slide
 
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Creating an API log file
 
@@ -427,7 +718,7 @@ New ideas for business value
 
 
 ---
-class: rstudio-slide
+class: white-slide
 
 ## Overall architecture
 

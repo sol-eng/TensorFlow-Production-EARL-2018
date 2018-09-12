@@ -57,3 +57,13 @@
   background-color: #f4f4f4;
 }
 
+.white-slide {
+  background-color: #fff;
+  padding-left: 5%;
+  padding-left: 5%;
+}
+
+
+.remark-code-line-highlighted {
+    background-color: #e4e479;
+}
